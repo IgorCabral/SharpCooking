@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text;
 using System.Web;
 using System.Web.Script.Serialization;
 
@@ -22,12 +23,12 @@ namespace SharpCooking
         {
             get
             {
-                return _ExpireTime ?? 60;
+                return _ExpireTime == 0 ? 60 : _ExpireTime;
             }
             set { _ExpireTime = value; }
         }
 
-        private static int? _ExpireTime { get; set; }
+        private static int _ExpireTime { get; set; }
 
         /// <summary>
         /// Set a cookie value, replacing if exists or creating new one if not
@@ -37,38 +38,74 @@ namespace SharpCooking
         /// <param name="expireMinutes">(OPTIONAL) Expiring time in minutes. If not set, it will use the global one (Default 60 minutes)</param>
         public static void SetCookie(object obj, string cookieKey, int expireMinutes = 0)
         {
-            if (expireMinutes == 0)
-                expireMinutes = ExpireTime;
+            try
+            {
+                if (obj == null)
+                    RemoveCookie(cookieKey);
+
+                if (expireMinutes == 0)
+                    expireMinutes = ExpireTime;
+            }
+            catch
+            {
+                expireMinutes = ExpireTime; }
 
             if (Convert.GetTypeCode(obj) != TypeCode.Object)
             {
-                var existingCookie = HttpContext.Current.Request[cookieKey];
-                if (existingCookie == null)
+                var existingCookie = HttpContext.Current.Request.Cookies[cookieKey];
+                var objString = obj.ToString();
+
+                if (Encoding.ASCII.GetBytes(objString).Length > 4000)
                 {
-                    HttpContext.Current.Response.Cookies.Add(new HttpCookie(cookieKey, obj.ToString()));
-                    HttpContext.Current.Request.Cookies.Add(new HttpCookie(cookieKey, obj.ToString()));
+                    throw new Exception("Maximum value of 4KB of json size reached ! Its not avaliable ");
+                }
+
+                if (existingCookie == null)
+                {   
+                    HttpContext.Current.Response.Cookies.Add(new HttpCookie(cookieKey, objString));
+                    HttpContext.Current.Request.Cookies.Add(new HttpCookie(cookieKey, objString));
                     HttpContext.Current.Response.Cookies[cookieKey].Expires = DateTime.Now.AddMinutes(expireMinutes);
                 }
                 else
                 {
-                    HttpContext.Current.Response.Cookies[cookieKey].Value = obj.ToString();
-                    HttpContext.Current.Request.Cookies[cookieKey].Value = obj.ToString();
+                    var existingResponseCookie = HttpContext.Current.Response.Cookies[cookieKey];
+                    if (existingResponseCookie == null)
+                        HttpContext.Current.Response.Cookies.Add(new HttpCookie(cookieKey, objString));
+                    else
+                        HttpContext.Current.Response.Cookies[cookieKey].Value = objString;
+
+                    
+                    HttpContext.Current.Request.Cookies[cookieKey].Value = objString;
                     HttpContext.Current.Response.Cookies[cookieKey].Expires = DateTime.Now.AddMinutes(expireMinutes);
                 }
             }
             else
             {
                 var existingCookie = HttpContext.Current.Request[cookieKey];
-                if (existingCookie == null)
+                var jsonObject =
+                    HttpContext.Current.Server.UrlEncode(new JavaScriptSerializer().Serialize(obj)).Replace(";", "");
+
+                if (Encoding.ASCII.GetBytes(jsonObject).Length > 4000)
                 {
-                    HttpContext.Current.Response.Cookies.Add(new HttpCookie(cookieKey, HttpContext.Current.Server.UrlEncode(new JavaScriptSerializer().Serialize(obj)).Replace(";", "")));
-                    HttpContext.Current.Request.Cookies.Add(new HttpCookie(cookieKey, HttpContext.Current.Server.UrlEncode(new JavaScriptSerializer().Serialize(obj)).Replace(";", "")));
+                    throw new Exception("Maximum value of 4KB of json size reached ! Its not avaliable ");
+                }
+
+                if (existingCookie == null)
+                {   
+                    HttpContext.Current.Response.Cookies.Add(new HttpCookie(cookieKey, jsonObject));
+                    HttpContext.Current.Request.Cookies.Add(new HttpCookie(cookieKey, jsonObject));
                     HttpContext.Current.Response.Cookies[cookieKey].Expires = DateTime.Now.AddMinutes(expireMinutes);
                 }
                 else
                 {
-                    HttpContext.Current.Response.Cookies[cookieKey].Value = HttpContext.Current.Server.UrlEncode(new JavaScriptSerializer().Serialize(obj)).Replace(";", "");
-                    HttpContext.Current.Request.Cookies[cookieKey].Value = HttpContext.Current.Server.UrlEncode(new JavaScriptSerializer().Serialize(obj)).Replace(";", "");
+                    var existingResponseCookie = HttpContext.Current.Response.Cookies[cookieKey];
+                    if (existingResponseCookie == null)
+                        HttpContext.Current.Response.Cookies.Add(new HttpCookie(cookieKey, jsonObject));
+                    else
+                        HttpContext.Current.Response.Cookies[cookieKey].Value = jsonObject;
+
+                    HttpContext.Current.Response.Cookies[cookieKey].Value = jsonObject;
+                    HttpContext.Current.Request.Cookies[cookieKey].Value = jsonObject;
                     HttpContext.Current.Response.Cookies[cookieKey].Expires = DateTime.Now.AddMinutes(expireMinutes);
                 }
             }
