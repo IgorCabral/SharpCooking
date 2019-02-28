@@ -131,10 +131,14 @@ namespace SharpCooking
             if (!string.IsNullOrEmpty(HttpContext.Current.Request.Cookies[cookieKey]?.Value))
             {
                 var tempValue = HttpContext.Current.Server.UrlDecode(HttpContext.Current.Request.Cookies[cookieKey]?.Value);
+                SetCookie(tempValue, cookieKey);
+
                 if ((tempValue.StartsWith("{") && tempValue.EndsWith("}")) || //For object
                     (tempValue.StartsWith("[") && tempValue.EndsWith("]"))) //For array        
+                {
                     return
-                        new JavaScriptSerializer().Deserialize<T>(tempValue);
+                          new JavaScriptSerializer().Deserialize<T>(tempValue);
+                }
 
                 return tempValue as T;
             }
