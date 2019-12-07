@@ -170,7 +170,21 @@ namespace SharpCooking
         /// <returns></returns>
         public static T GetCookie<T>(string cookieKey) where T : class
         {
-            if (!string.IsNullOrEmpty(HttpContext.Current.Request.Cookies[cookieKey]?.Value))
+            if (!string.IsNullOrEmpty(HttpContext.Current.Response.Cookies[cookieKey]?.Value))
+            {
+                var tempValue = Encoding.UTF8.GetString(Convert.FromBase64String(HttpContext.Current.Response.Cookies[cookieKey]?.Value));
+                SetCookie(tempValue, cookieKey);
+
+                if ((tempValue.StartsWith("{") && tempValue.EndsWith("}")) || //For object
+                    (tempValue.StartsWith("[") && tempValue.EndsWith("]"))) //For array        
+                {
+                    return
+                          new JavaScriptSerializer().Deserialize<T>(tempValue);
+                }
+
+                return tempValue as T;
+            }
+            else if (!string.IsNullOrEmpty(HttpContext.Current.Request.Cookies[cookieKey]?.Value))
             {
                 var tempValue = Encoding.UTF8.GetString(Convert.FromBase64String(HttpContext.Current.Request.Cookies[cookieKey]?.Value));
                 SetCookie(tempValue, cookieKey);
