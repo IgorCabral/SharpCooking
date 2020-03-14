@@ -24,7 +24,7 @@ namespace SharpCooking
         {
             get
             {
-                return _ExpireTime == 0 ? 60 : _ExpireTime;
+                return _ExpireTime == 0 ? 600 : _ExpireTime;
             }
             set { _ExpireTime = value; }
         }
@@ -49,7 +49,8 @@ namespace SharpCooking
             }
             catch
             {
-                expireMinutes = ExpireTime; }
+                expireMinutes = ExpireTime;
+            }
 
             if (Convert.GetTypeCode(obj) != TypeCode.Object)
             {
@@ -62,7 +63,7 @@ namespace SharpCooking
                 }
 
                 if (existingCookie == null)
-                {   
+                {
                     HttpContext.Current.Response.Cookies.Add(new HttpCookie(cookieKey, objString));
                     HttpContext.Current.Request.Cookies.Add(new HttpCookie(cookieKey, objString));
                     HttpContext.Current.Response.Cookies[cookieKey].Expires = DateTime.Now.AddMinutes(expireMinutes);
@@ -75,7 +76,7 @@ namespace SharpCooking
                     else
                         HttpContext.Current.Response.Cookies[cookieKey].Value = objString;
 
-                    
+
                     HttpContext.Current.Request.Cookies[cookieKey].Value = objString;
                     HttpContext.Current.Response.Cookies[cookieKey].Expires = DateTime.Now.AddMinutes(expireMinutes);
                 }
@@ -93,26 +94,26 @@ namespace SharpCooking
 
                     //if (existingCookie == null)
                     //{
-                        while (tempJsonObject.Length > 4000)
-                        {
-                            cookieNumber++;
-                            var startIndex = cookieNumber * 4000;                            
-                            tempJsonObject = jsonObject.Substring(startIndex, 4000);
-
-                            HttpContext.Current.Response.Cookies.Add(new HttpCookie(cookieKey + "_" + cookieNumber, tempJsonObject));
-                            HttpContext.Current.Request.Cookies.Add(new HttpCookie(cookieKey + "_" + cookieNumber, tempJsonObject));
-                            HttpContext.Current.Response.Cookies[cookieKey + "_" + cookieNumber].Expires = DateTime.Now.AddMinutes(expireMinutes);
-                        }
-
+                    while (tempJsonObject.Length > 4000)
+                    {
                         cookieNumber++;
-                        var startIndexOut = cookieNumber * 4000;
-                        tempJsonObject = jsonObject.Substring(startIndexOut, (jsonObject.Length - startIndexOut));
-                        //if (!string.IsNullOrEmpty(jsonObject.Substring(cookieNumber * 4000, jsonObject.Length - 1)))
-                        //{                               
-                            HttpContext.Current.Response.Cookies.Add(new HttpCookie(cookieKey + "_" + cookieNumber, tempJsonObject));
-                            HttpContext.Current.Request.Cookies.Add(new HttpCookie(cookieKey + "_" + cookieNumber, tempJsonObject));
-                            HttpContext.Current.Response.Cookies[cookieKey + "_" + cookieNumber].Expires = DateTime.Now.AddMinutes(expireMinutes);
-                        //}
+                        var startIndex = cookieNumber * 4000;
+                        tempJsonObject = jsonObject.Substring(startIndex, 4000);
+
+                        HttpContext.Current.Response.Cookies.Add(new HttpCookie(cookieKey + "_" + cookieNumber, tempJsonObject));
+                        HttpContext.Current.Request.Cookies.Add(new HttpCookie(cookieKey + "_" + cookieNumber, tempJsonObject));
+                        HttpContext.Current.Response.Cookies[cookieKey + "_" + cookieNumber].Expires = DateTime.Now.AddMinutes(expireMinutes);
+                    }
+
+                    cookieNumber++;
+                    var startIndexOut = cookieNumber * 4000;
+                    tempJsonObject = jsonObject.Substring(startIndexOut, (jsonObject.Length - startIndexOut));
+                    //if (!string.IsNullOrEmpty(jsonObject.Substring(cookieNumber * 4000, jsonObject.Length - 1)))
+                    //{                               
+                    HttpContext.Current.Response.Cookies.Add(new HttpCookie(cookieKey + "_" + cookieNumber, tempJsonObject));
+                    HttpContext.Current.Request.Cookies.Add(new HttpCookie(cookieKey + "_" + cookieNumber, tempJsonObject));
+                    HttpContext.Current.Response.Cookies[cookieKey + "_" + cookieNumber].Expires = DateTime.Now.AddMinutes(expireMinutes);
+                    //}
                     //}
                     //else
                     //{
@@ -133,9 +134,15 @@ namespace SharpCooking
                 {
                     if (existingCookie == null)
                     {
-                        HttpContext.Current.Response.Cookies.Add(new HttpCookie(cookieKey, jsonObject));
-                        HttpContext.Current.Request.Cookies.Add(new HttpCookie(cookieKey, jsonObject));
-                        HttpContext.Current.Response.Cookies[cookieKey].Expires = DateTime.Now.AddMinutes(expireMinutes);
+                        var cookieToSet = new HttpCookie(cookieKey)
+                        {
+                            Name = cookieKey,
+                            Value = jsonObject,
+                            Expires = DateTime.Now.AddMinutes(expireMinutes)
+                        };
+
+                        HttpContext.Current.Response.SetCookie(cookieToSet);
+                        HttpContext.Current.Request.Cookies.Add(cookieToSet);
                     }
                     else
                     {
@@ -197,24 +204,26 @@ namespace SharpCooking
                 }
 
                 return tempValue as T;
-            }else if(!string.IsNullOrEmpty(HttpContext.Current.Request.Cookies[cookieKey + "_0"]?.Value))
+            }
+            else if (!string.IsNullOrEmpty(HttpContext.Current.Request.Cookies[cookieKey + "_0"]?.Value))
             {
                 var existeCookie = true;
                 var cookieNum = -1;
                 var tempValue = "";
 
-                try { 
-                while (existeCookie)
+                try
                 {
-                    cookieNum++;
-                    var tempValueInternal = HttpContext.Current.Request.Cookies[cookieKey + "_" + cookieNum].Value;
-                    if (string.IsNullOrEmpty(tempValueInternal))
-                        existeCookie = true;
-                    else
+                    while (existeCookie)
                     {
-                        tempValue += tempValueInternal;
+                        cookieNum++;
+                        var tempValueInternal = HttpContext.Current.Request.Cookies[cookieKey + "_" + cookieNum].Value;
+                        if (string.IsNullOrEmpty(tempValueInternal))
+                            existeCookie = true;
+                        else
+                        {
+                            tempValue += tempValueInternal;
+                        }
                     }
-                }
 
                     cookieNum++;
                     var tempValueInternalOut = HttpContext.Current.Request.Cookies[cookieKey + "_" + cookieNum]?.Value;
@@ -222,7 +231,7 @@ namespace SharpCooking
                 }
                 catch { }
 
-                return new JavaScriptSerializer().Deserialize<T>(Encoding.UTF8.GetString(Convert.FromBase64String(tempValue))); 
+                return new JavaScriptSerializer().Deserialize<T>(Encoding.UTF8.GetString(Convert.FromBase64String(tempValue)));
             }
             return null;
         }
@@ -232,13 +241,13 @@ namespace SharpCooking
         /// </summary>
         /// <param name="cookieKey">Key of the cookie</param>
         /// <returns></returns>
-        public static object GetCookiePrimitiveType(string cookieKey)
-        {
-            if (!string.IsNullOrEmpty(HttpContext.Current.Request.Cookies[cookieKey]?.Value))
-                return HttpContext.Current.Request.Cookies[cookieKey]?.Value;
+        //public static object GetCookiePrimitiveType(string cookieKey)
+        //{
+        //    if (!string.IsNullOrEmpty(HttpContext.Current.Request.Cookies[cookieKey]?.Value))
+        //        return HttpContext.Current.Request.Cookies[cookieKey]?.Value;
 
-            return null;
-        }
+        //    return null;
+        //}
 
         /// <summary>
         /// Remove cookie associated on the given key
