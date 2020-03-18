@@ -255,6 +255,9 @@ namespace SharpCooking
         /// <param name="cookieKey"></param>
         public static void RemoveCookie(string cookieKey)
         {
+            var cookieToRemove = new HttpCookie(cookieKey);
+            cookieToRemove.Expires = DateTime.Now.AddDays(-1d);
+            HttpContext.Current.Response.Cookies.Add(cookieToRemove);
             HttpContext.Current.Response.Cookies[cookieKey].Expires = DateTime.Now.AddDays(-1);
         }
     }
